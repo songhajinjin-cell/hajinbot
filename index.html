@@ -1,108 +1,125 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hajin Search AI</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #6a85f1, #bac8ff);
-      color: #fff;
-    }
-    header {
-      width: 100%;
-      padding: 20px;
-      text-align: center;
-      font-size: 36px;
-      font-weight: 900;
-    }
-    .search-box {
-      display: flex;
-      width: 60%;
-      max-width: 500px;
-      margin: 20px 0;
-      background: white;
-      border-radius: 40px;
-      overflow: hidden;
-    }
-    .search-box input {
-      flex: 1;
-      border: none;
-      padding: 12px 20px;
-      font-size: 18px;
-      outline: none;
-    }
-    .search-box button {
-      background: #4d6df0;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .search-box button:hover {
-      background: #3a53c7;
-    }
-    main {
-      width: 100%;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-    .result-box {
-      width: 60%;
-      max-width: 500px;
-      background: #ffffffcc;
-      color: #333;
-      border-radius: 20px;
-      padding: 20px;
-      margin-top: 20px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      word-wrap: break-word;
-    }
-    footer {
-      width: 100%;
-      padding: 20px;
-      text-align: center;
-      font-size: 14px;
-      color: #fff;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>하진봇</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase (Google + 자체 ID) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  height:100vh;
+  display:flex;
+  background:linear-gradient(135deg,#5f7cff,#8fd3f4);
+}
+#sidebar{
+  width:250px;
+  padding:16px;
+  background:rgba(255,255,255,0.2);
+  backdrop-filter:blur(10px);
+}
+#main{flex:1;display:flex;flex-direction:column}
+#start{
+  flex:1;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;color:white;
+}
+#chat-screen{display:none;flex:1;flex-direction:column}
+#chat{flex:1;padding:16px;overflow-y:auto}
+.bubble{padding:12px 16px;border-radius:18px;margin:6px 0;max-width:70%}
+.user{background:#4d6df0;color:white;margin-left:auto}
+.bot{background:#f1f1f1}
+#input-box{display:flex;padding:10px;background:white}
+#input{flex:1;padding:12px;border-radius:10px;border:1px solid #ccc}
+button{margin-left:6px;padding:12px;border:none;border-radius:10px}
+</style>
 </head>
+
 <body>
-  <header>🤖 Hajin Search AI</header>
-  <div class="search-box">
-    <input id="searchInput" type="text" placeholder="검색어를 입력하세요..." />
-    <button onclick="search()">검색</button>
+
+<div id="sidebar">
+  <h2>🤖 하진봇</h2>
+  <button onclick="newChat()">➕ 새 채팅</button>
+  <button onclick="googleLogin()">Google 로그인</button>
+  <button onclick="emailLogin()">하진봇 ID</button>
+  <button onclick="naverLogin()">네이버 로그인</button>
+</div>
+
+<div id="main">
+  <div id="start">
+    <h1>하진봇</h1>
+    <p>AI에게 무엇이든 물어보세요</p>
   </div>
-  <main>
-    <div id="resultBox" class="result-box">검색 결과가 여기에 표시됩니다.</div>
-  </main>
-  <footer>© 2025 HajinBot | 모든 권리 보유</footer>
 
-  <script>
-    async function search() {
-      const query = document.getElementById('searchInput').value.trim();
-      const resultBox = document.getElementById('resultBox');
-      if(!query) return;
+  <div id="chat-screen">
+    <div id="chat"></div>
+    <div id="input-box">
+      <input id="input" placeholder="엔터로 전송"
+        onkeydown="if(event.key==='Enter') send()">
+      <button onclick="send()">전송</button>
+    </div>
+  </div>
+</div>
 
-      resultBox.innerHTML = '🔍 검색 중... 잠시만 기다려주세요...';
+<script>
+/* Firebase */
+firebase.initializeApp({
+  apiKey: "YOUR_FIREBASE_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com"
+});
+const auth = firebase.auth();
 
-      // 샘플 모의 API 결과 (실제 OpenAI/Google API 연결 가능)
-      setTimeout(() => {
-        resultBox.innerHTML = `✨ GPT 요약 결과:<br>"${query}"에 대해 핵심 내용을 분석했습니다!<br><br>📌 구글/네이버 참고 결과:<br>- 사이트1<br>- 사이트2<br>- 사이트3`;
-      }, 1000);
-    }
-  </script>
+let chats = [];
+function newChat(){
+  chats=[];
+  document.getElementById("chat").innerHTML="";
+  openChat();
+}
+function openChat(){
+  document.getElementById("start").style.display="none";
+  document.getElementById("chat-screen").style.display="flex";
+}
+function addBubble(role,text){
+  const d=document.createElement("div");
+  d.className="bubble "+role;
+  d.innerText=text;
+  document.getElementById("chat").appendChild(d);
+}
+
+async function send(){
+  const i=document.getElementById("input");
+  const text=i.value.trim();
+  if(!text) return;
+  i.value="";
+  openChat();
+  addBubble("user",text);
+
+  const res = await fetch("https://YOUR-SERVER.onrender.com/chat",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ message:text })
+  });
+  const data = await res.json();
+  addBubble("bot",data.reply);
+}
+
+/* 로그인 */
+function googleLogin(){
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+}
+function emailLogin(){
+  const e=prompt("이메일"), p=prompt("비밀번호");
+  auth.signInWithEmailAndPassword(e,p)
+    .catch(()=>auth.createUserWithEmailAndPassword(e,p));
+}
+function naverLogin(){
+  location.href="https://YOUR-SERVER.onrender.com/naver/login";
+}
+</script>
+
 </body>
 </html>
